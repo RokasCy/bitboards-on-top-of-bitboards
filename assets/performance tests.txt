@@ -1,0 +1,31 @@
+chess moves:
+d4, e4, kf3
+
+original
+
+nodes:377,527
+duration:653ms
+578142 nodes/s
+
+nodes:609,565
+duration:949ms
+642323 nodes/s
+
+nodes:663,441
+duration:1062ms
+624709 nodes/s
+
+
+alpha beta pruning
+
+nodes:32,806
+duration:93ms
+352753 nodes/s
+
+nodes:16,490
+duration:54ms
+305370 nodes/s
+
+nodes:10,511
+duration:57ms
+184404 nodes/s
