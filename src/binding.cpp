@@ -26,6 +26,7 @@ PYBIND11_MODULE(chess_engine, m) {
         .def("evaluation", &Board::evaluation)
         .def("get_minimax_move", &Board::get_minimax_move)
         .def("minimax_search", &Board::minimax_search)
+        .def("get_flags", &Board::get_flags)
 
         .def("update_attack_info", &Board::update_attack_info);
 

@@ -150,17 +150,12 @@ class Controller:
         #if not legal and self.drag.start != to_index : return
 
         self.move.to_ = to_index
+        board.get_flags(self.move, self.turn.value)
 
-        if(Piece(board.squares[to_index]) != Piece.EMPTY):
-            #capture flag
-            self.move.flags = 1
-        else: self.move.flags = 0
-
-        board.player_move(self.move)
-        board.update_attack_info()
-
-                #turn handling
+        #turn handling
         if(self.drag.start != to_index):
+            board.player_move(self.move)
+
             self.turn = Side.BLACK if self.turn == Side.WHITE else Side.WHITE
         
             if(self.robot):
@@ -172,6 +167,7 @@ class Controller:
         self.drag.piece = Piece.EMPTY
         self.drag.start = -1
         self.legal_moves = None
+        self.move.flags = 0
         
 
 

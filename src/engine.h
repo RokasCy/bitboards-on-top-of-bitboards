@@ -64,10 +64,17 @@ struct Board {
     U64 occupancy[2];
     U64 all_pieces;
 
+    //check handling
     U64 attacks[2]{};
     U64 pinned_bitboard[2]{}, checking_bitboard[2]{}, check_rays_bitboard[2]{};
     std::unordered_map<int, U64> pin_ray_bitboard[2]{};
     bool white_in_check=false, black_in_check=false;
+
+    //special moves
+    //[colour][king_moved, king_rook_moved, queen_rook_moved]
+    bool castling_rights[2][3] = { {true, true, true}, {true, true, true} }; 
+    U64 king_side_gaps[2] = {U64((1ULL << 5) | (1ULL << 6)), U64((1ULL << 61) | (1ULL << 62))};
+    U64 queen_side_gaps[2] = {U64((1ULL << 1) | (1ULL << 2) | (1ULL << 3)), U64((1ULL << 57) | (1ULL << 58) | (1ULL << 59))};
 
     std::array<int,64> squares{};
     std::stack<Undo> history{};
@@ -93,6 +100,9 @@ struct Board {
     void check_rays(int colour, int from, int r, int f, int dr, int df, U64 ray);
 
     void update_attack_info();
+    void get_flags(Move &move, int colour);
+    void castle_update(Move &move, int colour, bool undo);
+    void castle_right_update(Move &move, int colour, bool undo);
 };
 
 
