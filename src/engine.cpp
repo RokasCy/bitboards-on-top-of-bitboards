@@ -333,7 +333,9 @@ std::vector<Move> Board::generate_legal_moves(std::vector<Move> &pseudo_moves, i
             bool is_king = (bitboard[WHITE][KING] & from_mask);
             bool block_check = (check_rays_bitboard[BLACK] & to_mask);
             bool to_attacked = (attacks[BLACK] & to_mask);
+
             bool is_pinned = (pinned_bitboard[WHITE] & from_mask);
+            bool in_pin_ray = (pin_ray_bitboard[WHITE][m.from] & to_mask);
             
             if (white_in_check) {
                 if(double_check){
@@ -350,15 +352,13 @@ std::vector<Move> Board::generate_legal_moves(std::vector<Move> &pseudo_moves, i
             }
             else {
                 //for pinned pieces
-                if (!is_king) {
-                    if (is_pinned) {
-                        if (block_check){
-                            legal_moves.push_back(m);
-                        }
-                    }
-                    else {
+                if (is_pinned) {
+                    if (in_pin_ray){
                         legal_moves.push_back(m);
                     }
+                }
+                else {
+                    legal_moves.push_back(m);
                 }
             }
 
@@ -376,7 +376,9 @@ std::vector<Move> Board::generate_legal_moves(std::vector<Move> &pseudo_moves, i
             bool is_king = (bitboard[BLACK][KING] & from_mask);
             bool block_check = (check_rays_bitboard[WHITE] & to_mask);
             bool to_attacked = (attacks[WHITE] & to_mask);
+
             bool is_pinned = (pinned_bitboard[BLACK] & from_mask);
+            bool in_pin_ray = (pin_ray_bitboard[BLACK][m.from] & to_mask);
             
             if (black_in_check) {
                 if(double_check){
@@ -385,24 +387,23 @@ std::vector<Move> Board::generate_legal_moves(std::vector<Move> &pseudo_moves, i
                     continue;
                 }
 
-                if (!is_king && block_check) {
+                if (!is_king && !is_pinned && block_check) {
                     legal_moves.push_back(m);
                 }
 
             }
             else {
                 //for pinned pieces
-                if (!is_king) {
-                    if (is_pinned) {
-                        if (block_check){
-                            legal_moves.push_back(m);
-                        }
-                    }
-                    else {
+                if (is_pinned) {
+                    if (in_pin_ray){
                         legal_moves.push_back(m);
                     }
                 }
+                else {
+                    legal_moves.push_back(m);
+                }
             }
+        
 
             if (is_king && !to_attacked) {
                 legal_moves.push_back(m);
@@ -998,11 +999,10 @@ U64 Board::king_attacks(int colour){
 //finds pinned pieces and check rays
 void Board::check_rays(int colour, int from, int r, int f, int dr, int df, U64 ray){
     int opponent = (colour == WHITE ? BLACK : WHITE);
-    U64 block_mask = 1ULL << (r*8 + f);
-    bool set_check_ray_bb = false;
+    int block_index = r*8 + f;
+    U64 block_mask = 1ULL << block_index;
 
     ray |= 1ULL << from;
-
     //kings in check
     if(bitboard[opponent][KING] & block_mask){
         checking_bitboard[colour] |= (1ULL << from);
@@ -1016,12 +1016,12 @@ void Board::check_rays(int colour, int from, int r, int f, int dr, int df, U64 r
         if(r < 0 || r > 7 || f < 0 || f > 7) 
             break;
 
-        int to_mask = 1ULL <<  (r*8 + f);
-
+        U64 to_mask = 1ULL <<  (r*8 + f);
 
         if(all_pieces & to_mask){
             if(bitboard[opponent][KING] & to_mask){
                 pinned_bitboard[opponent] |= block_mask;
+                pin_ray_bitboard[opponent][block_index] = ray;
                 break;
             }
         }
@@ -1029,6 +1029,8 @@ void Board::check_rays(int colour, int from, int r, int f, int dr, int df, U64 r
         ray |= to_mask;
     }
 }
+
+// 
 
 void Board::update_attack_info(){
     white_in_check = black_in_check = false;
@@ -1048,5 +1050,4 @@ void Board::update_attack_info(){
 
     if(checking_bitboard[WHITE]) black_in_check = true;
     if(checking_bitboard[BLACK]) white_in_check = true;
-
 }

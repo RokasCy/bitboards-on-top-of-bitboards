@@ -3,6 +3,7 @@
 #include<cstdint>
 #include<vector>
 #include<unordered_set>
+#include<unordered_map>
 #include<stack>
 
 using U64 = uint64_t;
@@ -58,11 +59,6 @@ struct Undo {
     Undo(Move m, int cap) : move(m), captured_piece(cap) {}
 };
 
-struct PV {
-    std::vector<Move> line; // moves from root to leaf
-    int score;
-};
-
 struct Board {
     U64 bitboard[2][6];
     U64 occupancy[2];
@@ -70,6 +66,7 @@ struct Board {
 
     U64 attacks[2]{};
     U64 pinned_bitboard[2]{}, checking_bitboard[2]{}, check_rays_bitboard[2]{};
+    std::unordered_map<int, U64> pin_ray_bitboard[2]{};
     bool white_in_check=false, black_in_check=false;
 
     std::array<int,64> squares{};

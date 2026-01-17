@@ -1,5 +1,5 @@
 import sys
-sys.path.append("E:/C++/Projects/Chess Engine/build/Debug")
+sys.path.append("E:/Git/bitboards-on-top-of-bitboards/build/Debug")
 import chess_engine
 
 import pygame
