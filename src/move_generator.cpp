@@ -10,7 +10,7 @@ int pop_lsb(U64& bb){
     return static_cast<int>(index);
 }
 
-std::vector<Move> Board::generate_legal_moves(std::vector<Move> &pseudo_moves, int side){
+std::vector<Move> Board::generate_legal_moves(std::vector<Move> &pseudo_moves, int side, bool checkmate_check){
 
     std::vector<Move> legal_moves;
     
@@ -26,20 +26,18 @@ std::vector<Move> Board::generate_legal_moves(std::vector<Move> &pseudo_moves, i
             bool block_check = (check_rays_bitboard[BLACK] & to_mask);
             bool to_attacked = (attacks[BLACK] & to_mask);
 
+
             bool is_pinned = (pinned_bitboard[WHITE] & from_mask);
             bool in_pin_ray = (pin_ray_bitboard[WHITE][m.from] & to_mask);
-            
+
             if (white_in_check) {
                 if(double_check){
                     if(is_king && !to_attacked && !(m.flags & CASTLING))
-                    //std::cout<<3<<'\n';
                         legal_moves.push_back(m);
                     continue;
                 }
-
                 // if move blocks check or captures checking piece
                 if (!is_king && block_check) {
-                    //std::cout<<2<<'\n';
                     legal_moves.push_back(m);
                 }
 
@@ -48,12 +46,10 @@ std::vector<Move> Board::generate_legal_moves(std::vector<Move> &pseudo_moves, i
                 //for pinned pieces
                 if (is_pinned) {
                     if (in_pin_ray){
-                        //std::cout<<1<<'\n';
                         legal_moves.push_back(m);
                     }
                 }
                 else if (!is_king){
-                    //std::cout<<0<<'\n';
                     legal_moves.push_back(m);
                 }
             }
@@ -132,6 +128,9 @@ std::vector<Move> Board::generate_legal_moves(std::vector<Move> &pseudo_moves, i
             }
         }
     }
+    if(legal_moves.empty() && checkmate_check){
+        CHECKMATED[side] = true;
+    }
     return legal_moves;
 }
 
@@ -200,7 +199,7 @@ std::vector<Move> Board::generate_piece_moves(int piece, int from){
 
     if(piece == WHITE_PAWN){
         int to = from+UP;
-        //print_bb(all_pieces);
+        
         //if not last rank and not blocked
         if(rank != 7 && !(all_pieces & (1ULL << to))){
             moves.emplace_back(from, to, QUIET);
@@ -502,24 +501,27 @@ U64 Board::pawn_attacks(int colour){
             r = from / 8;
             f = from % 8;
 
+            U64 curr_attack = 0;
+
             if (r != 7){
                 U64 left_attack = (1ULL << (from+UP+LEFT));
                 U64 right_attack = (1ULL << (from+UP+RIGHT));
 
                 if (f > fileA){
-                    attacks |= left_attack;
+                    curr_attack |= left_attack;
                 }
                 if (f < fileH){
-                    attacks |= right_attack;
+                    curr_attack |= right_attack;
                 }
                 
-                if(bitboard[BLACK][KING] & (left_attack | right_attack)){
+                if(bitboard[BLACK][KING] & curr_attack){
                     check_rays_bitboard[WHITE] |= (1ULL << from);
                     checking_bitboard[WHITE] |= (1ULL << from);
                 }
             }
-        }
 
+            attacks |= curr_attack;
+        }
     }
     else {
         U64 bb = bitboard[BLACK][PAWN];
@@ -529,22 +531,25 @@ U64 Board::pawn_attacks(int colour){
             r = from / 8;
             f = from % 8;
 
+            U64 curr_attack = 0;
+
             if (r != 0){
                 U64 left_attack = (1ULL << (from+DOWN+LEFT));
                 U64 right_attack = (1ULL << (from+DOWN+RIGHT));
 
                 if (f < fileH){
-                    attacks |= right_attack;
+                    curr_attack |= right_attack;
                 }
                 if (f > fileA){
-                    attacks |= left_attack;
+                    curr_attack |= left_attack;
                 }
 
-                if(bitboard[WHITE][KING] & attacks){
+                if(bitboard[WHITE][KING] & curr_attack){
                     check_rays_bitboard[BLACK] |= (1ULL << from);
                     checking_bitboard[BLACK] |= (1ULL << from);
                 }
             }
+            attacks |= curr_attack;
         }
     }
     return attacks;
@@ -802,7 +807,6 @@ void Board::update_attack_info(){
 
     if(checking_bitboard[WHITE]) black_in_check = true;
     if(checking_bitboard[BLACK]) white_in_check = true;
-
 }
 
 void Board::castle_update(Move &move, int colour, bool undo){

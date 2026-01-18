@@ -28,6 +28,7 @@ enum Piece {
 
 enum Color { WHITE=0, BLACK=1 };
 enum UniquePiece { PAWN=0, KNIGHT=1, BISHOP=2, ROOK=3, QUEEN=4, KING=5 };
+
 const int CHECKMATE = 1'000'000;
 
 struct Board {
@@ -39,7 +40,9 @@ struct Board {
     U64 attacks[2]{};
     U64 pinned_bitboard[2]{}, checking_bitboard[2]{}, check_rays_bitboard[2]{};
     std::unordered_map<int, U64> pin_ray_bitboard[2]{};
+
     bool white_in_check=false, black_in_check=false;
+    std::array<bool, 2> CHECKMATED = {false, false};
 
     //special moves
     //[colour][king_moved, king_rook_moved, queen_rook_moved]
@@ -57,7 +60,7 @@ struct Board {
     void undo_move();
     std::vector<Move> generate_piece_moves(int piece, int from);
     std::vector<Move> generate_all_moves(int side);
-    std::vector<Move> generate_legal_moves(std::vector<Move> &pseudo_moves, int side);
+    std::vector<Move> generate_legal_moves(std::vector<Move> &pseudo_moves, int side, bool checkmate_check);
     int evaluation();
     std::pair<Move, int> get_minimax_move(int side);
     int minimax_search(int depth, bool maximizing_player, int alpha, int beta);

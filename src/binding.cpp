@@ -17,6 +17,7 @@ PYBIND11_MODULE(chess_engine, m) {
     py::class_<Board>(m, "Board")
         .def(py::init<>())
         .def_readonly("squares", &Board::squares)
+        .def_readonly("CHECKMATED", &Board::CHECKMATED)
         .def("set_up_board", &Board::set_up_board)
         .def("player_move", &Board::player_move)
         .def("make_move", &Board::make_move)

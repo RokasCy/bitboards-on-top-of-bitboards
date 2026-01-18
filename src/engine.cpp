@@ -13,8 +13,7 @@
 #include<intrin.h>
 #include<cassert>
 
-//to do list: 
-//add checkmate
+//to do list:
 //more moves (pawn promotion, en passent)
 //more advanced evaluator
 
@@ -250,7 +249,7 @@ std::pair<Move, int> Board::get_minimax_move(int side){
     if (side == WHITE){
         best_eval = INT_MIN;
 
-        auto moves = generate_legal_moves(generate_all_moves(WHITE), WHITE);
+        auto moves = generate_legal_moves(generate_all_moves(WHITE), WHITE, true);
         if (moves.empty())
             return {Move{}, -CHECKMATE};
 
@@ -268,7 +267,7 @@ std::pair<Move, int> Board::get_minimax_move(int side){
     }
     else {
         best_eval = INT_MAX;
-        auto moves = generate_legal_moves(generate_all_moves(BLACK), BLACK);
+        auto moves = generate_legal_moves(generate_all_moves(BLACK), BLACK, true);
         if (moves.empty()){
             return {Move{}, CHECKMATE};
         }
@@ -304,7 +303,7 @@ int Board::minimax_search(int depth, bool maximizing_player, int alpha, int beta
         return evaluation();
 
     if (maximizing_player){
-        auto moves = generate_legal_moves(generate_all_moves(WHITE), WHITE);
+        auto moves = generate_legal_moves(generate_all_moves(WHITE), WHITE, false);
         if (moves.empty())
             return -CHECKMATE;
 
@@ -325,7 +324,7 @@ int Board::minimax_search(int depth, bool maximizing_player, int alpha, int beta
         return max_eval;
     }
     else {
-        auto moves = generate_legal_moves(generate_all_moves(BLACK), BLACK);
+        auto moves = generate_legal_moves(generate_all_moves(BLACK), BLACK, false);
         if (moves.empty())
             return CHECKMATE;
 

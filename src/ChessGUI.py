@@ -8,6 +8,7 @@ from pieces import Piece, pieces_image_setup, Drag, Side
 
 pygame.init()
 
+
 def coord_to_index(x, y):
     return x + y*8
 
@@ -18,7 +19,9 @@ def get_side(piece):
 
 class Renderer:
 
-    board_colour = [(200, 200, 200), (50, 50, 50)]
+    board_colour = [(213, 194, 183), (145, 85, 51)]
+    move_colour = (25, 25, 25, 150)
+    once = False
 
     def __init__(self):
 
@@ -28,6 +31,7 @@ class Renderer:
         self.board_layer = pygame.Surface((BOARD_SIZE, BOARD_SIZE))
         self.piece_layer = pygame.Surface((BOARD_SIZE, BOARD_SIZE), pygame.SRCALPHA)
         self.highlight_layer = pygame.Surface((BOARD_SIZE, BOARD_SIZE), pygame.SRCALPHA)
+        self.checkmate_layer = pygame.Surface((BOARD_SIZE, BOARD_SIZE), pygame.SRCALPHA)
 
 
     def draw_board(self):
@@ -84,16 +88,32 @@ class Renderer:
             file = square.to_ % 8
 
             if (square.flags == 1):
-                pygame.draw.circle(self.highlight_layer, (120, 120, 120, 150),
+                pygame.draw.circle(self.highlight_layer, renderer.move_colour,
                                (file*self.square_size+offset, rank*self.square_size+offset),
                                radius=offset, width=offset//6)
             else:
-                pygame.draw.circle(self.highlight_layer, (120, 120, 120, 150),
+                pygame.draw.circle(self.highlight_layer, renderer.move_colour,
                                (file*self.square_size+offset, rank*self.square_size+offset),
                                radius=offset//4)
             
 
         window.blit(self.highlight_layer)
+    
+    def checkmate(self, CHECKMATED):
+        if CHECKMATED[0]:
+            pygame.draw.rect(self.checkmate_layer, (150, 150, 150, 75), (0, 0, BOARD_SIZE, BOARD_SIZE))
+            if not Renderer.once: 
+                print("WHITE IS CHECKMATED")
+                Renderer.once = True
+        elif CHECKMATED[1]:
+            pygame.draw.rect(self.checkmate_layer, (150, 150, 150, 75), (0, 0, BOARD_SIZE, BOARD_SIZE))
+            if not Renderer.once: 
+                print("BLACK IS CHECKMATED")
+                Renderer.once = True
+
+        window.blit(self.checkmate_layer)
+            
+
 
 def index_to_cord(index):
     return (index % 8, index // 8)
@@ -132,8 +152,7 @@ class Controller:
         self.drag.start = from_index
         self.move.from_ = from_index
 
-        self.legal_moves = board.generate_legal_moves(board.generate_piece_moves(piece, from_index), self.turn.value)
-        #print(board.generate_piece_moves(piece, from_index))
+        self.legal_moves = board.generate_legal_moves(board.generate_piece_moves(piece, from_index), self.turn.value, False)
     
     def putdown(self):
         x = self.drag.pixel_pos[0] * 8 // BOARD_SIZE
@@ -171,11 +190,15 @@ class Controller:
         self.drag.start = -1
         self.legal_moves = None
         self.move.flags = 0
+
+        #check if checkmated
+        board.generate_legal_moves(board.generate_all_moves(self.turn.value), self.turn.value, True)
         
 
 
 BOARD_SIZE = 800
 window = pygame.display.set_mode((BOARD_SIZE, BOARD_SIZE))
+pygame.display.set_caption("Chess Engine")
 
 board = chess_engine.Board()
 board.set_up_board()
@@ -203,6 +226,7 @@ while running:
     renderer.draw_board()
     renderer.draw_highlights(controller.legal_moves)
     renderer.draw_pieces(controller.drag)
+    renderer.checkmate(board.CHECKMATED)
     
     pygame.display.flip()
         
