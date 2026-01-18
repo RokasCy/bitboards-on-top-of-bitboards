@@ -14,6 +14,7 @@
 #include<cassert>
 
 //to do list:
+//promotion bug: robot promoting doesn't work
 //more moves (pawn promotion, en passent)
 //more advanced evaluator
 
@@ -94,6 +95,9 @@ void Board::player_move(Move& move){
         piece_index = piece - 6;
     }
 
+        // adding/removing piece from bitboards
+    bitboard[colour][piece_index] = (bitboard[colour][piece_index] & ~from_mask) | to_mask;
+
     if (move.flags & CAPTURE){
         int captured = squares[move.to];
         int opponent = (colour == WHITE ? BLACK : WHITE);
@@ -101,16 +105,17 @@ void Board::player_move(Move& move){
 
         bitboard[opponent][captured_index] &= ~to_mask;
     }
-    if (move.flags & CASTLING){
-        castle_update(move, colour, false);
-    }
-    castle_right_update(move, colour, false);
-
     squares[move.from] = EMPTY;
     squares[move.to] = piece;
 
-    // adding/removing piece from bitboards
-    bitboard[colour][piece_index] = (bitboard[colour][piece_index] & ~from_mask) | to_mask;
+    if (move.flags & CASTLING){
+        castle_update(move, colour, false);
+    }
+    if (move.flags & PROMOTION){
+        std::cout<<"PROMOting/";
+        promotion(move, colour, false);
+    }
+    castle_right_update(move, colour);
 
 
     occupancy[WHITE] = occupancy[BLACK] = 0;
@@ -121,6 +126,7 @@ void Board::player_move(Move& move){
 
     all_pieces = occupancy[WHITE] | occupancy[BLACK];
     update_attack_info();
+
 }
 
 void Board::make_move(Move& move){
@@ -139,6 +145,10 @@ void Board::make_move(Move& move){
         colour = BLACK; piece_index = piece - 6;
     }
 
+    
+    // adding/removing piece from bitboards
+    bitboard[colour][piece_index] = (bitboard[colour][piece_index] & ~from_mask) | to_mask;
+
     if (move.flags & CAPTURE){
         int captured = squares[move.to];
         int opponent = (colour == WHITE ? BLACK : WHITE);
@@ -146,16 +156,17 @@ void Board::make_move(Move& move){
 
         bitboard[opponent][captured_index] &= ~to_mask;
     }
-    if (move.flags & CASTLING){
-        castle_update(move, colour, false);
-    }
-    castle_right_update(move, colour, false);
 
     squares[move.from] = EMPTY;
     squares[move.to] = piece;
 
-    // adding/removing piece from bitboards
-    bitboard[colour][piece_index] = (bitboard[colour][piece_index] & ~from_mask) | to_mask;
+    if (move.flags & CASTLING){
+        castle_update(move, colour, false);
+    }
+    if (move.flags & PROMOTION){
+        promotion(move, colour, false);
+    }
+    castle_right_update(move, colour);
 
     occupancy[WHITE] = occupancy[BLACK] = 0;
     for(int pt=0; pt<6; pt++){
@@ -192,6 +203,7 @@ void Board::undo_move(){
     // adding/removing piece from bitboards
     bitboard[colour][piece_index] = (bitboard[colour][piece_index] & ~to_mask) | from_mask;
 
+
     if (move.flags & CAPTURE){
         int captured = u.captured_piece;
         int opponent = (colour == WHITE ? BLACK : WHITE);
@@ -203,6 +215,17 @@ void Board::undo_move(){
         squares[move.to] = EMPTY;
     }
 
+    all_pieces = occupancy[WHITE] | occupancy[BLACK];
+
+    if (move.flags & CASTLING){
+        castle_update(move, colour, true);
+    }
+    if (move.flags & PROMOTION){
+        promotion(move, colour, true);
+    }
+    //revert back to old castling rights
+    castling_rights = u.castling_rights;
+
     occupancy[WHITE] = 0;
     occupancy[BLACK] = 0;
     for (int pt = 0; pt < 6; pt++) {
@@ -210,13 +233,6 @@ void Board::undo_move(){
         occupancy[BLACK] |= bitboard[BLACK][pt];
     }
 
-    all_pieces = occupancy[WHITE] | occupancy[BLACK];
-
-    if (move.flags & CASTLING){
-        castle_update(move, colour, true);
-    }
-    //revert back to old castling rights
-    castling_rights = u.castling_rights;
 
     update_attack_info();
 }
@@ -294,6 +310,7 @@ std::pair<Move, int> Board::get_minimax_move(int side){
     std::cout<<nodes / (duration.count()/1000.0)<<" nodes/s"<<"\n\n";
 
     nodes=0;
+    std::cout<<best_move.flags<<'\n';
     return std::make_pair(best_move, best_eval);
 }
 
@@ -362,5 +379,13 @@ void Board::get_flags(Move &move, int colour){
                 move.flags |= CASTLING;
             }
         }
+    }
+    int to_rank = move.to / 8;
+
+    if((bitboard[WHITE][PAWN] & from_mask) && to_rank==7) {
+        move.flags |= PROMOTION;
+    }
+    if((bitboard[BLACK][PAWN] & from_mask) && to_rank==0) {
+        move.flags |= PROMOTION;
     }
 }

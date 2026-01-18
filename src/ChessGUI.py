@@ -128,10 +128,8 @@ class Controller:
         self.turn = Side.WHITE
         self.legal_moves = None
 
-        self.robot = True
+        self.robot = False
         self.player_side = Side.WHITE
-        
-
 
 
     def pickup(self, event):

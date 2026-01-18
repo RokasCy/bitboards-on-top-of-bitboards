@@ -199,10 +199,16 @@ std::vector<Move> Board::generate_piece_moves(int piece, int from){
 
     if(piece == WHITE_PAWN){
         int to = from+UP;
-        
+
         //if not last rank and not blocked
         if(rank != 7 && !(all_pieces & (1ULL << to))){
-            moves.emplace_back(from, to, QUIET);
+            if(rank == 6){
+                moves.emplace_back(from, to, PROMOTION);
+            }
+            else {
+                moves.emplace_back(from, to, QUIET);
+            }
+            
             
             if(rank == 1 && !(all_pieces & (1ULL << (to+UP)))){
                 moves.emplace_back(from, to+UP, QUIET);
@@ -210,13 +216,22 @@ std::vector<Move> Board::generate_piece_moves(int piece, int from){
 
         }
 
-        if (rank != 7){
-            
+        if (rank != 7){   
             if(file > fileA && (occupancy[BLACK] & (1ULL << (to+LEFT)))){
-                moves.emplace_back(from, to+LEFT, CAPTURE);
+                if(rank == 6){
+                    moves.emplace_back(from, to+LEFT, PROMOTION | CAPTURE);
+                }
+                else {
+                    moves.emplace_back(from, to+LEFT, CAPTURE);
+                }
             }
             if(file < fileH && (occupancy[BLACK] & (1ULL << (to+RIGHT)))){
-                moves.emplace_back(from, to+RIGHT, CAPTURE);
+                if(rank == 6){
+                    moves.emplace_back(from, to+RIGHT, PROMOTION | CAPTURE);
+                }
+                else {
+                    moves.emplace_back(from, to+RIGHT, CAPTURE);
+                }
             }
         }
     }
@@ -225,7 +240,12 @@ std::vector<Move> Board::generate_piece_moves(int piece, int from){
 
         //if not last rank and not blocked
         if(rank != 0 && !(all_pieces & (1ULL << to))){
-            moves.emplace_back(from, to, QUIET);
+            if(rank == 1){
+                moves.emplace_back(from, to, PROMOTION);
+            }
+            else {
+                moves.emplace_back(from, to, QUIET);
+            }
             
             if(rank == 6 && !(all_pieces & (1ULL << (to+DOWN)))){
                 moves.emplace_back(from, to+DOWN, QUIET);
@@ -234,12 +254,24 @@ std::vector<Move> Board::generate_piece_moves(int piece, int from){
 
         if(rank != 7){
             if(file < fileH && (occupancy[WHITE] & (1ULL << (to+RIGHT)))){
-                moves.emplace_back(from, to+RIGHT, CAPTURE);
+                if(rank == 1){
+                    moves.emplace_back(from, to+RIGHT, PROMOTION | CAPTURE);
+                }
+                else {
+                    moves.emplace_back(from, to+RIGHT, CAPTURE);
+                }
             }
             if(file > fileA && (occupancy[WHITE] & (1ULL << (to+LEFT)))){
-                moves.emplace_back(from, to+LEFT, CAPTURE);
+                if(rank == 1){
+                    moves.emplace_back(from, to+LEFT, PROMOTION | CAPTURE);
+                }
+                else {
+                    moves.emplace_back(from, to+LEFT, CAPTURE);
+                }
             }
         }
+
+        //fix this
     }
 
     else if(piece == WHITE_KNIGHT){
@@ -436,23 +468,23 @@ std::vector<Move> Board::generate_piece_moves(int piece, int from){
             if(occupancy[BLACK] & (1ULL << to)) {moves.emplace_back(from, to, CAPTURE);}
             else if(!(occupancy[WHITE] & (1ULL << to))){moves.emplace_back(from, to, QUIET);}
         }
-
-        if (castling_rights[WHITE][0]){
-            //king side castle
-            if(castling_rights[WHITE][1]){
-                if (!(all_pieces & king_side_gaps[WHITE])){
-                    moves.emplace_back(from, 6, CASTLING);
+        if(!white_in_check){
+            if (castling_rights[WHITE][0]){
+                //king side castle
+                if(castling_rights[WHITE][1]){
+                    if (!(all_pieces & king_side_gaps[WHITE])){
+                        moves.emplace_back(from, 6, CASTLING);
+                    }
                 }
-            }
 
-            //queen side castle
-            if(castling_rights[WHITE][2]){
-                if (!(all_pieces & queen_side_gaps[WHITE])){
-                    moves.emplace_back(from, 1, CASTLING);
+                //queen side castle
+                if(castling_rights[WHITE][2]){
+                    if (!(all_pieces & queen_side_gaps[WHITE])){
+                        moves.emplace_back(from, 1, CASTLING);
+                    }
                 }
             }
         }
-
     }
     else if(piece == BLACK_KING){
         for (auto [dr, df] : STRAIGHTS_DIAGONALS){
@@ -468,18 +500,20 @@ std::vector<Move> Board::generate_piece_moves(int piece, int from){
             else if(!(occupancy[BLACK] & (1ULL << to))){moves.emplace_back(from, to, QUIET);}
         }
 
-        if (castling_rights[BLACK][0]){
-            //king side castle
-            if(castling_rights[BLACK][1]){
-                if (!(all_pieces & king_side_gaps[BLACK])){
-                    moves.emplace_back(from, 62, CASTLING);
+        if(!black_in_check){
+            if (castling_rights[BLACK][0]){
+                //king side castle
+                if(castling_rights[BLACK][1]){
+                    if (!(all_pieces & king_side_gaps[BLACK])){
+                        moves.emplace_back(from, 62, CASTLING);
+                    }
                 }
-            }
 
-            //queen side castle
-            if(castling_rights[BLACK][2]){
-                if (!(all_pieces & queen_side_gaps[BLACK])){
-                    moves.emplace_back(from, 57, CASTLING);
+                //queen side castle
+                if(castling_rights[BLACK][2]){
+                    if (!(all_pieces & queen_side_gaps[BLACK])){
+                        moves.emplace_back(from, 57, CASTLING);
+                    }
                 }
             }
         }
@@ -868,7 +902,7 @@ void Board::castle_update(Move &move, int colour, bool undo){
     }
 }
 
-void Board::castle_right_update(Move& move, int colour, bool undo){
+void Board::castle_right_update(Move& move, int colour){
     int opponent = (colour == WHITE ? BLACK : WHITE);
     U64 from_mask = (1ULL << move.from);
 
@@ -892,3 +926,22 @@ void Board::castle_right_update(Move& move, int colour, bool undo){
         else if (move.from == 63) castling_rights[colour][1] = false;
     }
 }
+
+void Board::promotion(Move& move, int colour, bool undo){
+    U64 from_mask = (1ULL << move.from);
+    U64 to_mask = (1ULL << move.to);
+    if(undo){
+        //add pawn / remove queen
+        bitboard[colour][PAWN] |= from_mask;
+        bitboard[colour][QUEEN] = (bitboard[colour][QUEEN] & ~from_mask);
+        squares[move.from] = (colour == WHITE ? WHITE_PAWN : BLACK_PAWN);
+    }
+    else {
+        //remove pawn / add queen
+        bitboard[colour][PAWN] = (bitboard[colour][PAWN] & ~to_mask);
+        bitboard[colour][QUEEN] |= to_mask;
+
+        squares[move.to] = (colour == WHITE ? WHITE_QUEEN : BLACK_QUEEN);
+    }
+
+}   

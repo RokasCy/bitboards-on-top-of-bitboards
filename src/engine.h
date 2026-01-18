@@ -76,7 +76,9 @@ struct Board {
     void update_attack_info();
     void get_flags(Move &move, int colour);
     void castle_update(Move &move, int colour, bool undo);
-    void castle_right_update(Move &move, int colour, bool undo);
+    void castle_right_update(Move &move, int colour);
+
+    void promotion(Move &move, int colour, bool undo);
 };
 
 void print_bb(U64 &bb);
