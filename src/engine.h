@@ -6,15 +6,9 @@
 #include<unordered_map>
 #include<stack>
 
-using U64 = uint64_t;
+#include"move_generator.h"
 
-enum MoveFlags : uint8_t {
-    QUIET        = 0,
-    CAPTURE      = 1 << 0,
-    EN_PASSANT   = 1 << 1,
-    CASTLING     = 1 << 2,
-    PROMOTION    = 1 << 3
-};
+using U64 = uint64_t;
 
 enum Piece {
     WHITE_PAWN = 0,
@@ -32,32 +26,9 @@ enum Piece {
     EMPTY = 12
 };
 
-enum Directions {
-    UP = 8,
-    DOWN = -8,
-    LEFT = -1,
-    RIGHT = 1,
-
-};
-
 enum Color { WHITE=0, BLACK=1 };
 enum UniquePiece { PAWN=0, KNIGHT=1, BISHOP=2, ROOK=3, QUEEN=4, KING=5 };
-
-
-struct Move {
-    int from, to, flags;
-
-    Move() = default;
-    Move(int f, int t, int fl)
-        : from(f), to(t), flags(fl) {}
-};
-
-struct Undo {
-    Move move;
-    int captured_piece;
-
-    Undo(Move m, int cap) : move(m), captured_piece(cap) {}
-};
+const int CHECKMATE = 1'000'000;
 
 struct Board {
     U64 bitboard[2][6];
@@ -72,7 +43,7 @@ struct Board {
 
     //special moves
     //[colour][king_moved, king_rook_moved, queen_rook_moved]
-    bool castling_rights[2][3] = { {true, true, true}, {true, true, true} }; 
+    std::array<std::array<bool, 3>, 2> castling_rights{ { {true, true, true}, {true, true, true} } };
     U64 king_side_gaps[2] = {U64((1ULL << 5) | (1ULL << 6)), U64((1ULL << 61) | (1ULL << 62))};
     U64 queen_side_gaps[2] = {U64((1ULL << 1) | (1ULL << 2) | (1ULL << 3)), U64((1ULL << 57) | (1ULL << 58) | (1ULL << 59))};
 
@@ -105,8 +76,7 @@ struct Board {
     void castle_right_update(Move &move, int colour, bool undo);
 };
 
-
-
+void print_bb(U64 &bb);
 
 
 

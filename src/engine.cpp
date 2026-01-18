@@ -1,4 +1,6 @@
 #include"engine.h"
+#include"move_generator.h"
+
 #include<iostream>
 #include<unordered_set>
 #include<cmath>
@@ -12,7 +14,6 @@
 #include<cassert>
 
 //to do list: 
-//understand file seperation
 //add checkmate
 //more moves (pawn promotion, en passent)
 //more advanced evaluator
@@ -79,92 +80,91 @@ void Board::set_up_board(){
             }
         }
     }
-    
 }
 
 void Board::player_move(Move& move){
     U64 from_mask = 1ULL << move.from;
     U64 to_mask = 1ULL << move.to;
 
-    int piece = squares[move.from], colour;
-    if (piece <= 5 && piece >= 0) colour = WHITE; 
-    else {colour = BLACK;}
+    int piece = squares[move.from], piece_index, colour;
+    if (piece <= 5 && piece >= 0) {
+        colour = WHITE; piece_index = piece;
+    }
+    else {
+        colour = BLACK;
+        piece_index = piece - 6;
+    }
 
     if (move.flags & CAPTURE){
         int captured = squares[move.to];
         int opponent = (colour == WHITE ? BLACK : WHITE);
-        if (opponent == BLACK){
-            bitboard[opponent][captured-6] &= ~to_mask;
-        }
-        else {
-             bitboard[opponent][captured] &= ~to_mask;
-        }
-        
-        print_bb(bitboard[opponent][captured-6]);
-        occupancy[opponent] = (occupancy[opponent] & ~to_mask);
+        int captured_index = (opponent == BLACK ? captured - 6 : captured);
+
+        bitboard[opponent][captured_index] &= ~to_mask;
     }
+    if (move.flags & CASTLING){
+        castle_update(move, colour, false);
+    }
+    castle_right_update(move, colour, false);
 
     squares[move.from] = EMPTY;
     squares[move.to] = piece;
 
-    if (piece == WHITE_ROOK || piece == BLACK_ROOK || piece == WHITE_KING || piece == BLACK_KING){
-        castle_right_update(move, colour, false);
-    }
-    if(move.flags & CASTLING){
-        castle_update(move, colour, false);
-    }
-
-    if(colour == BLACK) piece -= 6;
     // adding/removing piece from bitboards
-    bitboard[colour][piece] = (bitboard[colour][piece] & ~from_mask) | to_mask;
-    occupancy[colour] = (occupancy[colour] & ~from_mask) | to_mask;
-    all_pieces = (all_pieces & ~from_mask) | to_mask; 
+    bitboard[colour][piece_index] = (bitboard[colour][piece_index] & ~from_mask) | to_mask;
 
-    //print_bb(attacks[BLACK]);
+
+    occupancy[WHITE] = occupancy[BLACK] = 0;
+    for(int pt=0; pt<6; pt++){
+        occupancy[WHITE] |= bitboard[WHITE][pt];
+        occupancy[BLACK] |= bitboard[BLACK][pt];
+    }
+
+    all_pieces = occupancy[WHITE] | occupancy[BLACK];
     update_attack_info();
-    //print_bb(bitboard[BLACK][QUEEN]);
 }
 
 void Board::make_move(Move& move){
-    Undo u(move, squares[move.to]);
+    Undo u(move, squares[move.to], castling_rights);
     history.push(u);
 
     U64 from_mask = 1ULL << move.from;
     U64 to_mask = 1ULL << move.to;
 
-    int piece = squares[move.from], colour;
+    int piece = squares[move.from], piece_index, colour;
 
-    if (piece <= 5 && piece >= 0) colour = WHITE; 
-    else {colour = BLACK;}
+    if (piece <= 5 && piece >= 0) {
+        colour = WHITE; piece_index = piece;
+    }
+    else {
+        colour = BLACK; piece_index = piece - 6;
+    }
 
     if (move.flags & CAPTURE){
         int captured = squares[move.to];
         int opponent = (colour == WHITE ? BLACK : WHITE);
+        int captured_index = (opponent == BLACK ? captured - 6 : captured);
 
-        if (opponent == BLACK){
-            bitboard[opponent][captured-6] &= ~to_mask;
-        }
-        else {
-             bitboard[opponent][captured] &= ~to_mask;
-        }
-        occupancy[opponent] = (occupancy[opponent] & ~to_mask);
+        bitboard[opponent][captured_index] &= ~to_mask;
     }
+    if (move.flags & CASTLING){
+        castle_update(move, colour, false);
+    }
+    castle_right_update(move, colour, false);
 
     squares[move.from] = EMPTY;
     squares[move.to] = piece;
 
-    if (piece == WHITE_ROOK || piece == BLACK_ROOK || piece == WHITE_KING || piece == BLACK_KING){
-        castle_right_update(move, colour, false);
-    }
-    if(move.flags & CASTLING){
-        castle_update(move, colour, false);
+    // adding/removing piece from bitboards
+    bitboard[colour][piece_index] = (bitboard[colour][piece_index] & ~from_mask) | to_mask;
+
+    occupancy[WHITE] = occupancy[BLACK] = 0;
+    for(int pt=0; pt<6; pt++){
+        occupancy[WHITE] |= bitboard[WHITE][pt];
+        occupancy[BLACK] |= bitboard[BLACK][pt];
     }
 
-    if(colour == BLACK) piece -= 6;
-    // adding/removing piece from bitboards
-    bitboard[colour][piece] = (bitboard[colour][piece] & ~from_mask) | to_mask;
-    occupancy[colour] = (occupancy[colour] & ~from_mask) | to_mask;
-    all_pieces = (all_pieces & ~from_mask) | to_mask; 
+    all_pieces = occupancy[WHITE] | occupancy[BLACK];
 
     update_attack_info();
 }
@@ -180,41 +180,46 @@ void Board::undo_move(){
     U64 from_mask = 1ULL << move.from;
     U64 to_mask = 1ULL << move.to;
 
-    int piece = squares[move.to], colour;
+    int piece = squares[move.to], colour, piece_index;
     squares[move.from] = piece;
 
-    if (piece <= 5 && piece >= 0) {colour = WHITE;}
-    else {colour = BLACK; piece -= 6;}
+    if (piece <= 5 && piece >= 0) {
+        colour = WHITE; piece_index = piece;
+    }
+    else {
+        colour = BLACK; piece_index = piece - 6;
+    }
 
     // adding/removing piece from bitboards
-    bitboard[colour][piece] = (bitboard[colour][piece] & ~to_mask) | from_mask;
-    occupancy[colour] = (occupancy[colour] & ~to_mask) | from_mask;
-    all_pieces = (all_pieces & ~to_mask) | from_mask; 
-    
+    bitboard[colour][piece_index] = (bitboard[colour][piece_index] & ~to_mask) | from_mask;
 
     if (move.flags & CAPTURE){
         int captured = u.captured_piece;
         int opponent = (colour == WHITE ? BLACK : WHITE);
+        int captured_index = (opponent == BLACK ? captured - 6 : captured);
 
-        bitboard[opponent][captured] |= to_mask;
-        occupancy[opponent] |= to_mask;
-	    all_pieces |= to_mask;
-
+        bitboard[opponent][captured_index] |= to_mask;
 	    squares[move.to] = u.captured_piece;
     } else {
         squares[move.to] = EMPTY;
     }
 
-    if (piece == WHITE_ROOK || piece == BLACK_ROOK || piece == WHITE_KING || piece == BLACK_KING){
-        castle_right_update(move, colour, true);
+    occupancy[WHITE] = 0;
+    occupancy[BLACK] = 0;
+    for (int pt = 0; pt < 6; pt++) {
+        occupancy[WHITE] |= bitboard[WHITE][pt];
+        occupancy[BLACK] |= bitboard[BLACK][pt];
     }
+
+    all_pieces = occupancy[WHITE] | occupancy[BLACK];
+
     if (move.flags & CASTLING){
         castle_update(move, colour, true);
     }
-
+    //revert back to old castling rights
+    castling_rights = u.castling_rights;
 
     update_attack_info();
-
 }
 
 int Board::evaluation(){
@@ -247,7 +252,7 @@ std::pair<Move, int> Board::get_minimax_move(int side){
 
         auto moves = generate_legal_moves(generate_all_moves(WHITE), WHITE);
         if (moves.empty())
-            return {Move{}, evaluation()};
+            return {Move{}, -CHECKMATE};
 
         for(auto m : moves){
             make_move(m);
@@ -263,10 +268,11 @@ std::pair<Move, int> Board::get_minimax_move(int side){
     }
     else {
         best_eval = INT_MAX;
-
         auto moves = generate_legal_moves(generate_all_moves(BLACK), BLACK);
-        if (moves.empty())
-            return {Move{}, evaluation()};
+        if (moves.empty()){
+            return {Move{}, CHECKMATE};
+        }
+
 
         for(auto m : moves){
             make_move(m);
@@ -300,7 +306,7 @@ int Board::minimax_search(int depth, bool maximizing_player, int alpha, int beta
     if (maximizing_player){
         auto moves = generate_legal_moves(generate_all_moves(WHITE), WHITE);
         if (moves.empty())
-            return evaluation();
+            return -CHECKMATE;
 
         int max_eval = INT_MIN;
         for(auto m : moves){
@@ -321,7 +327,7 @@ int Board::minimax_search(int depth, bool maximizing_player, int alpha, int beta
     else {
         auto moves = generate_legal_moves(generate_all_moves(BLACK), BLACK);
         if (moves.empty())
-            return evaluation();
+            return CHECKMATE;
 
         int min_eval = INT_MAX;
         for(auto m : moves){
@@ -338,28 +344,6 @@ int Board::minimax_search(int depth, bool maximizing_player, int alpha, int beta
         }
         return min_eval;
     }
-}
-
-
-void Board::update_attack_info(){
-    white_in_check = black_in_check = false;
-    for(int colour=WHITE; colour<=BLACK; colour++){
-        attacks[colour] = 0;
-        pinned_bitboard[(colour == WHITE ? BLACK : WHITE)] = 0;
-        checking_bitboard[colour] = 0;
-        check_rays_bitboard[colour] = 0;
-
-        attacks[colour] |= pawn_attacks(colour)
-                | knight_attacks(colour)
-                | bishop_attacks(colour)
-                | rook_attacks(colour)
-                | queen_attacks(colour)
-                | king_attacks(colour);
-    }
-
-    if(checking_bitboard[WHITE]) black_in_check = true;
-    if(checking_bitboard[BLACK]) white_in_check = true;
-
 }
 
 

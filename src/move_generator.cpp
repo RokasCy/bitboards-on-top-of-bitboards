@@ -1,4 +1,6 @@
 #include"engine.h"
+#include"move_generator.h"
+#include<iostream>
 
 //pop least significant bit
 int pop_lsb(U64& bb){
@@ -30,12 +32,14 @@ std::vector<Move> Board::generate_legal_moves(std::vector<Move> &pseudo_moves, i
             if (white_in_check) {
                 if(double_check){
                     if(is_king && !to_attacked && !(m.flags & CASTLING))
+                    //std::cout<<3<<'\n';
                         legal_moves.push_back(m);
                     continue;
                 }
 
                 // if move blocks check or captures checking piece
                 if (!is_king && block_check) {
+                    //std::cout<<2<<'\n';
                     legal_moves.push_back(m);
                 }
 
@@ -44,10 +48,12 @@ std::vector<Move> Board::generate_legal_moves(std::vector<Move> &pseudo_moves, i
                 //for pinned pieces
                 if (is_pinned) {
                     if (in_pin_ray){
+                        //std::cout<<1<<'\n';
                         legal_moves.push_back(m);
                     }
                 }
                 else if (!is_king){
+                    //std::cout<<0<<'\n';
                     legal_moves.push_back(m);
                 }
             }
@@ -194,8 +200,7 @@ std::vector<Move> Board::generate_piece_moves(int piece, int from){
 
     if(piece == WHITE_PAWN){
         int to = from+UP;
-
-
+        //print_bb(all_pieces);
         //if not last rank and not blocked
         if(rank != 7 && !(all_pieces & (1ULL << to))){
             moves.emplace_back(from, to, QUIET);
@@ -535,7 +540,7 @@ U64 Board::pawn_attacks(int colour){
                     attacks |= left_attack;
                 }
 
-                if(bitboard[WHITE][KING] & (left_attack | right_attack)){
+                if(bitboard[WHITE][KING] & attacks){
                     check_rays_bitboard[BLACK] |= (1ULL << from);
                     checking_bitboard[BLACK] |= (1ULL << from);
                 }
@@ -771,12 +776,33 @@ void Board::check_rays(int colour, int from, int r, int f, int dr, int df, U64 r
             if(bitboard[opponent][KING] & to_mask){
                 pinned_bitboard[opponent] |= block_mask;
                 pin_ray_bitboard[opponent][block_index] = ray;
-                break;
             }
+            break;
         }
 
         ray |= to_mask;
     }
+}
+
+void Board::update_attack_info(){
+    white_in_check = black_in_check = false;
+    for(int colour=WHITE; colour<=BLACK; colour++){
+        attacks[colour] = 0;
+        pinned_bitboard[(colour == WHITE ? BLACK : WHITE)] = 0;
+        checking_bitboard[colour] = 0;
+        check_rays_bitboard[colour] = 0;
+
+        attacks[colour] |= pawn_attacks(colour)
+                | knight_attacks(colour)
+                | bishop_attacks(colour)
+                | rook_attacks(colour)
+                | queen_attacks(colour)
+                | king_attacks(colour);
+    }
+
+    if(checking_bitboard[WHITE]) black_in_check = true;
+    if(checking_bitboard[BLACK]) white_in_check = true;
+
 }
 
 void Board::castle_update(Move &move, int colour, bool undo){
@@ -788,25 +814,21 @@ void Board::castle_update(Move &move, int colour, bool undo){
             if(move.to == 6){ 
                 bitboard[colour][ROOK] = (bitboard[colour][ROOK] & ~(1ULL << 5)) | (1ULL << 7);
                 squares[5] = EMPTY; squares[7] = (colour == WHITE ? WHITE_ROOK : BLACK_ROOK);
-                castling_rights[colour][1] = true;  // restore
             }
             else if(move.to == 1){
                 bitboard[colour][ROOK] = (bitboard[colour][ROOK] & ~(1ULL << 2)) | (1ULL << 0);
                 squares[2] = EMPTY; squares[0] = (colour == WHITE ? WHITE_ROOK : BLACK_ROOK);
-                castling_rights[colour][2] = true;
             }
         }
         else {
             if(move.to == 57){ 
                 bitboard[colour][ROOK] = (bitboard[colour][ROOK] & ~(1ULL << 58)) | (1ULL << 56);
                 squares[58] = EMPTY; squares[56] = (colour == WHITE ? WHITE_ROOK : BLACK_ROOK);
-                castling_rights[colour][2] = true;
             }
 
             if(move.to == 62){  
                 bitboard[colour][ROOK] = (bitboard[colour][ROOK] & ~(1ULL << 61)) | (1ULL << 63);
                 squares[61] = EMPTY; squares[63] = (colour == WHITE ? WHITE_ROOK : BLACK_ROOK);
-                castling_rights[colour][2] = true;
             }
         }
         return ;
@@ -843,44 +865,26 @@ void Board::castle_update(Move &move, int colour, bool undo){
 }
 
 void Board::castle_right_update(Move& move, int colour, bool undo){
-    if(undo){
-        if(bitboard[colour][KING] & (1ULL << move.from)){
-            castling_rights[colour][0] = true;  
-            return ;
-        }
+    int opponent = (colour == WHITE ? BLACK : WHITE);
+    U64 from_mask = (1ULL << move.from);
 
-        if (move.flags & CAPTURE){
-            if(move.to == 0) castling_rights[colour][2] = true; 
-            else if(move.to == 7) castling_rights[colour][1] = true; 
-            else if(move.to == 56) castling_rights[colour][2] = true;
-            else if(move.to == 63) castling_rights[colour][1] = true;
-            return;
-        }
-
-        if(move.from == 0) castling_rights[colour][2] = true; 
-        else if(move.from == 7) castling_rights[colour][1] = true; 
-        else if(move.from == 56) castling_rights[colour][2] = true;
-        else if(move.from == 63) castling_rights[colour][1] = true;
-
-        return ;
-    }
-
-    if(bitboard[colour][KING] & (1ULL << move.from)){
+    if(bitboard[colour][KING] & from_mask){
         castling_rights[colour][0] = false;
         return ;
     }
 
     //rook being captured
     if (move.flags & CAPTURE){
-        if(move.to  == 0) castling_rights[colour][2] = false;
-        else if (move.to == 7) castling_rights[colour][1] = false;
-        else if (move.to == 56) castling_rights[colour][2] = false;
-        else if (move.to == 63) castling_rights[colour][1] = false;
-        return ;
+        if(move.to  == 0) castling_rights[opponent][2] = false;
+        else if (move.to == 7) castling_rights[opponent][1] = false;
+        else if (move.to == 56) castling_rights[opponent][2] = false;
+        else if (move.to == 63) castling_rights[opponent][1] = false;
     }
-    //rook move
-    if(move.from  == 0) castling_rights[colour][2] = false;
-    else if (move.from == 7) castling_rights[colour][1] = false;
-    else if (move.from == 56) castling_rights[colour][2] = false;
-    else if (move.from == 63) castling_rights[colour][1] = false;
+
+    if (bitboard[colour][ROOK] & from_mask){
+        if(move.from  == 0) castling_rights[colour][2] = false;
+        else if (move.from == 7) castling_rights[colour][1] = false;
+        else if (move.from == 56) castling_rights[colour][2] = false;
+        else if (move.from == 63) castling_rights[colour][1] = false;
+    }
 }

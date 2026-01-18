@@ -108,7 +108,7 @@ class Controller:
         self.turn = Side.WHITE
         self.legal_moves = None
 
-        self.robot = False
+        self.robot = True
         self.player_side = Side.WHITE
         
 
@@ -133,6 +133,7 @@ class Controller:
         self.move.from_ = from_index
 
         self.legal_moves = board.generate_legal_moves(board.generate_piece_moves(piece, from_index), self.turn.value)
+        #print(board.generate_piece_moves(piece, from_index))
     
     def putdown(self):
         x = self.drag.pixel_pos[0] * 8 // BOARD_SIZE
@@ -161,7 +162,9 @@ class Controller:
             if(self.robot):
                 robot_move, eval = board.get_minimax_move(self.turn.value)
                 board.player_move(robot_move)
+                #print(robot_move.from_, robot_move.to_, robot_move.flags)
                 print(f"evaluation:{eval}\n")
+
                 self.turn = Side.BLACK if self.turn == Side.WHITE else Side.WHITE
 
         self.drag.piece = Piece.EMPTY
@@ -203,4 +206,3 @@ while running:
     
     pygame.display.flip()
         
-    
