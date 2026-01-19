@@ -889,9 +889,9 @@ void Board::castle_update(Move &move, int colour, bool undo){
 
 void Board::castle_right_update(Move& move, int colour){
     int opponent = (colour == WHITE ? BLACK : WHITE);
-    U64 from_mask = (1ULL << move.from);
+    U64 to_mask = (1ULL << move.to);
 
-    if(bitboard[colour][KING] & from_mask){
+    if(bitboard[colour][KING] & to_mask){
         castling_rights[colour][0] = false;
         return ;
     }
@@ -904,7 +904,7 @@ void Board::castle_right_update(Move& move, int colour){
         else if (move.to == 63) castling_rights[opponent][1] = false;
     }
 
-    if (bitboard[colour][ROOK] & from_mask){
+    if (bitboard[colour][ROOK] & to_mask){
         if(move.from  == 0) castling_rights[colour][2] = false;
         else if (move.from == 7) castling_rights[colour][1] = false;
         else if (move.from == 56) castling_rights[colour][2] = false;

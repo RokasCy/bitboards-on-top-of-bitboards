@@ -175,6 +175,14 @@ class Controller:
             board.player_move(self.move)
             board.evaluation()
 
+            #draw the piece move before the search engine lag
+            self.drag.piece = Piece.EMPTY
+            self.legal_moves = None
+            renderer.draw_board()
+            renderer.draw_pieces(controller.drag)
+
+            pygame.display.flip()
+
             self.turn = Side.BLACK if self.turn == Side.WHITE else Side.WHITE
         
             if(self.robot):
@@ -183,6 +191,7 @@ class Controller:
                 print(f"evaluation:{eval}\n")
 
                 self.turn = Side.BLACK if self.turn == Side.WHITE else Side.WHITE
+
 
         self.drag.piece = Piece.EMPTY
         self.drag.start = -1

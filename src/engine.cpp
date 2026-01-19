@@ -240,6 +240,7 @@ int Board::evaluation(){
     }
     //piece square tables
     int phase = ((WHITE_VALUE+BLACK_VALUE)>3800 ? mid_game : end_game);
+
     for (int piece=PAWN; piece<=KING; piece++){
         
         U64 bb = bitboard[WHITE][piece];
@@ -258,7 +259,7 @@ int Board::evaluation(){
     //number of squares attacked
     WHITE_VALUE += __popcnt64(attacks[WHITE]) * 5;
     BLACK_VALUE += __popcnt64(attacks[BLACK]) * 5;
-    
+
     return WHITE_VALUE-BLACK_VALUE;
 }
 
