@@ -1,7 +1,12 @@
 import sys
-sys.path.append("E:/Git/bitboards-on-top-of-bitboards/build/Debug")
-import chess_engine
+import os
 
+# folder where .pyd is located
+script_dir = os.path.dirname(__file__)
+module_path = os.path.join(os.path.dirname(script_dir), "build", "Release")
+sys.path.append(module_path)
+
+import chess_engine
 import pygame
 from pieces import Piece, pieces_image_setup, Drag, Side
 
