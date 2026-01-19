@@ -1,13 +1,26 @@
 #include"engine.h"
 #include"move_generator.h"
+#include"utils.h"
+
 #include<iostream>
 
 //pop least significant bit
-int pop_lsb(U64& bb){
+inline int pop_lsb(U64& bb){
     unsigned long index;
     _BitScanForward64(&index, bb); // find LSB
     bb &= bb - 1;             
     return static_cast<int>(index);
+}
+
+void print_bb(U64 &bb){
+    for(int y=7; y>=0; y--){
+        for(int x=0; x<8; x++){
+            if (bb & (1ULL << x+y*8)) std::cout<<1;
+            else std::cout<<0;
+        }
+        std::cout<<'\n';
+    }
+    std::cout<<'\n';
 }
 
 std::vector<Move> Board::generate_legal_moves(std::vector<Move> &pseudo_moves, int side, bool checkmate_check){
@@ -275,35 +288,30 @@ std::vector<Move> Board::generate_piece_moves(int piece, int from){
     }
 
     else if(piece == WHITE_KNIGHT){
-        
-        for(auto m : KNIGHT_MOVES){
-            int to = from+m;
-            if(to < 0 || to >= 64) continue;
-            
-            int drank = abs(rank - to/8);
-            int dfile = abs(file - to%8);
-            if(drank + dfile == 3){
-                if (occupancy[BLACK] & (1ULL << (to))){
-                    moves.emplace_back(from, to, CAPTURE);
-                }
-                else if (!(occupancy[WHITE] & (1ULL << (to)))) 
-                    moves.emplace_back(from, to, QUIET);
+        U64 lookup_moves = knight_lookup[from];
+        lookup_moves = (lookup_moves & ~occupancy[WHITE]); //remove friendly occupied squares
+
+        while(lookup_moves){
+            int to = pop_lsb(lookup_moves);
+            if(occupancy[BLACK] & (1ULL << to)){
+                moves.emplace_back(from, to, CAPTURE);
+            }
+            else {
+                moves.emplace_back(from, to, QUIET);
             }
         }
     }
     else if(piece == BLACK_KNIGHT){
-        
-        for(auto m : KNIGHT_MOVES){
-            int to = from+m;
-            if(to < 0 || to >= 64) continue;
+        U64 lookup_moves = knight_lookup[from];
+        lookup_moves = (lookup_moves & ~occupancy[BLACK]); //remove friendly occupied squares
 
-            int drank = abs(rank - to/8);
-            int dfile = abs(file - to%8);
-            if(drank + dfile == 3){
-                if (occupancy[WHITE] & (1ULL << (to)))
-                    moves.emplace_back(from, to, CAPTURE);
-                else if (!(occupancy[BLACK] & (1ULL << (to)))) 
-                    moves.emplace_back(from, to, QUIET);
+        while(lookup_moves){
+            int to = pop_lsb(lookup_moves);
+            if(occupancy[WHITE] & (1ULL << to)){
+                moves.emplace_back(from, to, CAPTURE);
+            }
+            else {
+                moves.emplace_back(from, to, QUIET);
             }
         }
     }
@@ -456,18 +464,19 @@ std::vector<Move> Board::generate_piece_moves(int piece, int from){
         }
     }
     else if(piece == WHITE_KING){
-        for (auto [dr, df] : STRAIGHTS_DIAGONALS){
-            int r = rank+dr;
-            int f = file+df;
+        U64 lookup_moves = king_lookup[from];
+        lookup_moves = (lookup_moves & ~occupancy[WHITE]); //remove friendly occupied squares
 
-            if(r < 0 || r > 7 || f < 0 || f > 7) 
-                continue;
-
-            int to = r*8 + f;
-
-            if(occupancy[BLACK] & (1ULL << to)) {moves.emplace_back(from, to, CAPTURE);}
-            else if(!(occupancy[WHITE] & (1ULL << to))){moves.emplace_back(from, to, QUIET);}
+        while(lookup_moves){
+            int to = pop_lsb(lookup_moves);
+            if(occupancy[BLACK] & (1ULL << to)){
+                moves.emplace_back(from, to, CAPTURE);
+            }
+            else {
+                moves.emplace_back(from, to, QUIET);
+            }
         }
+
         if(!white_in_check){
             if (castling_rights[WHITE][0]){
                 //king side castle
@@ -487,17 +496,17 @@ std::vector<Move> Board::generate_piece_moves(int piece, int from){
         }
     }
     else if(piece == BLACK_KING){
-        for (auto [dr, df] : STRAIGHTS_DIAGONALS){
-            int r = rank+dr;
-            int f = file+df;
+        U64 lookup_moves = king_lookup[from];
+        lookup_moves = (lookup_moves & ~occupancy[BLACK]); //remove friendly occupied squares
 
-            if(r < 0 || r > 7 || f < 0 || f > 7) 
-                continue;
-
-            int to = r*8 + f;
-
-            if(occupancy[WHITE] & (1ULL << to)) {moves.emplace_back(from, to, CAPTURE);}
-            else if(!(occupancy[BLACK] & (1ULL << to))){moves.emplace_back(from, to, QUIET);}
+        while(lookup_moves){
+            int to = pop_lsb(lookup_moves);
+            if(occupancy[WHITE] & (1ULL << to)){
+                moves.emplace_back(from, to, CAPTURE);
+            }
+            else {
+                moves.emplace_back(from, to, QUIET);
+            }
         }
 
         if(!black_in_check){
@@ -597,26 +606,13 @@ U64 Board::knight_attacks(int colour){
 
     while(bb){
         int from = pop_lsb(bb);
-        int rank = from / 8;
-        int file = from % 8;
-
-        for(auto m : KNIGHT_MOVES){
-            int to = from+m;
-            if(to < 0 || to >= 64) continue;
-            
-            int drank = abs(rank - to/8);
-            int dfile = abs(file - to%8);
-            if(drank + dfile == 3){
-                attacks |= (1ULL << to);
-                
-                if (bitboard[opponent][KING] & (1ULL << to)){
-                    check_rays_bitboard[colour] |= (1ULL << from);
-                    checking_bitboard[colour] |= (1ULL << from);
-                }
-            }
+        U64 curr_attack = knight_lookup[from];
+        attacks |= curr_attack;
+        if(curr_attack & bitboard[opponent][KING]){
+            checking_bitboard[colour] |= (1ULL << from);
+            check_rays_bitboard[colour] |= (1ULL << from);
         }
     }
-
     return attacks;
 }
 
@@ -771,20 +767,7 @@ U64 Board::king_attacks(int colour){
 
     while(bb){
         int from = pop_lsb(bb);
-        int rank = from / 8;
-        int file = from % 8;
-
-        for (auto [dr, df] : STRAIGHTS_DIAGONALS){
-            int r = rank+dr;
-            int f = file+df;
-
-            if(r < 0 || r > 7 || f < 0 || f > 7) 
-                continue;
-
-            int to = r*8 + f;
-
-            attacks |= (1ULL << to);
-        }      
+        attacks |= king_lookup[from];
     }
     return attacks;
 }
@@ -841,6 +824,8 @@ void Board::update_attack_info(){
 
     if(checking_bitboard[WHITE]) black_in_check = true;
     if(checking_bitboard[BLACK]) white_in_check = true;
+
+    //print_bb(bitboard[WHITE][KING]);
 }
 
 void Board::castle_update(Move &move, int colour, bool undo){
@@ -945,3 +930,47 @@ void Board::promotion(Move& move, int colour, bool undo){
     }
 
 }   
+
+void Board::knight_move_init(){
+    for(int from=0; from<64; from++){
+        int rank = from / 8;
+        int file = from % 8;
+
+        U64 targets = 0;
+
+        for(auto m : KNIGHT_MOVES){
+            int to = from+m;
+            if(to < 0 || to >= 64) continue;
+            
+            int drank = abs(rank - to/8);
+            int dfile = abs(file - to%8);
+            if(drank + dfile == 3){
+                targets |= (1ULL << to);
+            }
+        }
+        knight_lookup[from] = targets;
+    }
+}
+
+void Board::king_move_init(){
+    for(int from=0; from<64; from++){
+        int rank = from / 8;
+        int file = from % 8;
+
+        U64 targets = 0;
+
+        for (auto [dr, df] : STRAIGHTS_DIAGONALS){
+            int r = rank+dr;
+            int f = file+df;
+
+            if(r < 0 || r > 7 || f < 0 || f > 7) 
+                continue;
+
+            int to = r*8 + f;
+
+            targets |= (1ULL << to);
+        }
+        
+        king_lookup[from] = targets;
+    }
+}

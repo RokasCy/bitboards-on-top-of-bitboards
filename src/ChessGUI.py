@@ -128,7 +128,7 @@ class Controller:
         self.turn = Side.WHITE
         self.legal_moves = None
 
-        self.robot = False
+        self.robot = True
         self.player_side = Side.WHITE
 
 
@@ -165,7 +165,7 @@ class Controller:
                 legal = True
                 break
         
-        #if not legal and self.drag.start != to_index : return
+        if not legal and self.drag.start != to_index : return
 
         self.move.to_ = to_index
         board.get_flags(self.move, self.turn.value)
@@ -173,13 +173,13 @@ class Controller:
         #turn handling
         if(self.drag.start != to_index):
             board.player_move(self.move)
+            board.evaluation()
 
             self.turn = Side.BLACK if self.turn == Side.WHITE else Side.WHITE
         
             if(self.robot):
                 robot_move, eval = board.get_minimax_move(self.turn.value)
                 board.player_move(robot_move)
-                #print(robot_move.from_, robot_move.to_, robot_move.flags)
                 print(f"evaluation:{eval}\n")
 
                 self.turn = Side.BLACK if self.turn == Side.WHITE else Side.WHITE
@@ -203,6 +203,12 @@ board.set_up_board()
 
 renderer = Renderer()
 controller = Controller()
+
+if(controller.player_side == Side.BLACK):
+    robot_move, eval = board.get_minimax_move(Side.WHITE.value)
+    board.player_move(robot_move)
+    print(f"evaluation:{eval}\n")
+    controller.turn = Side.BLACK
 
 running = True
 while running:

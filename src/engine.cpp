@@ -1,5 +1,6 @@
 #include"engine.h"
 #include"move_generator.h"
+#include"utils.h"
 
 #include<iostream>
 #include<unordered_set>
@@ -14,20 +15,9 @@
 #include<cassert>
 
 //to do list:
-//promotion bug: robot promoting doesn't work
-//more moves (pawn promotion, en passent)
-//more advanced evaluator
+//redo update_attack_info
+//pawn lookup table
 
-void print_bb(U64 &bb){
-    for(int y=7; y>=0; y--){
-        for(int x=0; x<8; x++){
-            if (bb & (1ULL << x+y*8)) std::cout<<1;
-            else std::cout<<0;
-        }
-        std::cout<<'\n';
-    }
-    std::cout<<'\n';
-}
 
 Board::Board() {
 
@@ -80,6 +70,9 @@ void Board::set_up_board(){
             }
         }
     }
+
+    knight_move_init();
+    king_move_init();
 }
 
 void Board::player_move(Move& move){
@@ -112,7 +105,6 @@ void Board::player_move(Move& move){
         castle_update(move, colour, false);
     }
     if (move.flags & PROMOTION){
-        std::cout<<"PROMOting/";
         promotion(move, colour, false);
     }
     castle_right_update(move, colour);
@@ -126,7 +118,6 @@ void Board::player_move(Move& move){
 
     all_pieces = occupancy[WHITE] | occupancy[BLACK];
     update_attack_info();
-
 }
 
 void Board::make_move(Move& move){
@@ -238,14 +229,36 @@ void Board::undo_move(){
 }
 
 int Board::evaluation(){
-    static int pieceValue[5] = {100, 300, 300, 500, 900};
+    static int pieceValue[6] = {100, 300, 300, 500, 900, 0};
+    static int c=0;
 
     int WHITE_VALUE = 0, BLACK_VALUE = 0;
-    for (int piece=PAWN; piece<=QUEEN; piece++){
-            WHITE_VALUE += __popcnt64(bitboard[WHITE][piece]) * pieceValue[piece];
-            BLACK_VALUE += __popcnt64(bitboard[BLACK][piece]) * pieceValue[piece];
+    //material calc
+    for (int piece=PAWN; piece<=KING; piece++){
+        WHITE_VALUE += __popcnt64(bitboard[WHITE][piece]) * pieceValue[piece];
+        BLACK_VALUE += __popcnt64(bitboard[BLACK][piece]) * pieceValue[piece];
     }
+    //piece square tables
+    int phase = ((WHITE_VALUE+BLACK_VALUE)>3800 ? mid_game : end_game);
+    for (int piece=PAWN; piece<=KING; piece++){
+        
+        U64 bb = bitboard[WHITE][piece];
+        while(bb){
+            int index = pop_lsb(bb);
+            WHITE_VALUE += pst[phase][piece][index ^ 56]; //rank inversion (56 = 0b111000) RRRFFF
+        }
 
+        bb = bitboard[BLACK][piece];
+        while(bb){
+            int index = pop_lsb(bb);
+            BLACK_VALUE += pst[phase][piece][index];
+        }
+    }
+   
+    //number of squares attacked
+    WHITE_VALUE += __popcnt64(attacks[WHITE]) * 5;
+    BLACK_VALUE += __popcnt64(attacks[BLACK]) * 5;
+    
     return WHITE_VALUE-BLACK_VALUE;
 }
 
@@ -310,7 +323,6 @@ std::pair<Move, int> Board::get_minimax_move(int side){
     std::cout<<nodes / (duration.count()/1000.0)<<" nodes/s"<<"\n\n";
 
     nodes=0;
-    std::cout<<best_move.flags<<'\n';
     return std::make_pair(best_move, best_eval);
 }
 

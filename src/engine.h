@@ -31,6 +31,10 @@ enum UniquePiece { PAWN=0, KNIGHT=1, BISHOP=2, ROOK=3, QUEEN=4, KING=5 };
 
 const int CHECKMATE = 1'000'000;
 
+extern const int pst[2][6][64];
+enum Phases {mid_game=0, end_game=1};
+
+
 struct Board {
     U64 bitboard[2][6];
     U64 occupancy[2];
@@ -52,6 +56,10 @@ struct Board {
 
     std::array<int,64> squares{};
     std::stack<Undo> history{};
+
+    std::unordered_map<int, U64> pawn_lookup;
+    std::unordered_map<int, U64> knight_lookup;
+    std::unordered_map<int, U64> king_lookup;
 
     Board();
     void set_up_board();
@@ -79,10 +87,9 @@ struct Board {
     void castle_right_update(Move &move, int colour);
 
     void promotion(Move &move, int colour, bool undo);
+
+    void knight_move_init();
+    void king_move_init();
 };
-
-void print_bb(U64 &bb);
-
-
 
 
