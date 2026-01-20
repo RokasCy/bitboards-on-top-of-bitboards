@@ -11,7 +11,7 @@ I chose to wrap the engine with python since working in c++ libraries was too mu
 
 ## Board Representation
 
-To represent the board position we utilize bitboards. A bitboard is a 64-bit integer that stores the positions of each piece (1 means the square is occupied and 0 means its empty). Due to the fact that a chess board contains 64 squares we can describe the board position using 12 of these bitboards (1 for each unique piece type). Effectively describing the board position using 12 large numbers.
+To represent the board position we utilize bitboards. A bitboard is a 64-bit integer that stores the positions of each piece in its binary form (1 means the square is occupied and 0 means its empty). Due to the fact that a chess board contains 64 squares we can describe the board position using 12 of these bitboards (1 for each unique piece type). Effectively describing the board position using 12 large numbers.
 
 This turns out to be a very efficient way of representing the board since we can perform various of bitwise operations to move pieces around with minimal computational overhead
 
@@ -19,14 +19,20 @@ This turns out to be a very efficient way of representing the board since we can
 
 ## Engine Search
 
-The Engine employs an algorithm called minimax (with alpha beta pruning) to calculate the best posible move. 
-
+The Engine employs an algorithm called minimax to calculate the best posible move. 
 - The algorithm simulates all possible moves up to a certain depth
 - It then calculates the evaluation of all board positions
 - Finally it finds the best move for a side assuming black will always play a move that minimizes the evaluation and white plays a move that maximizes
 - Alpha Beta pruning lets us significantly reduce the number of calculations by letting us skip positions, once we know a side already has a better move to play.
 
 ![Minimax Algorithm](assets/minimax.png)
+
+## Evaluation
+
+The evaluation system is quite simple only consisting of a few calculations for each side:
+- The total piece material
+- The position of each piece (piece square tables)
+- Number of squares attacked (not sure how much this helps)
 
 ## Instructions
 
@@ -45,7 +51,6 @@ cmake --build . --config Release
 ```
 
 This will create a .pyd inside build/Release/. To finally run the program make sure the correct directory to the .pyd is linked inside ChessGUI.py and run the script.
-
 
 
 
