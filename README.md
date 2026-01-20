@@ -32,7 +32,7 @@ The Engine employs an algorithm called minimax to calculate the best posible mov
 The evaluation system is quite simple only consisting of a few calculations for each side:
 - The total piece material
 - The position of each piece (piece square tables)
-- Number of squares attacked (not sure how much this helps)
+- Number of squares attacked +some other things (not sure how much this helps) 
 
 ## Instructions
 

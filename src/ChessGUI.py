@@ -92,7 +92,8 @@ class Renderer:
             rank = 7-square.to_ // 8
             file = square.to_ % 8
 
-            if (square.flags == 1):
+            #capture flag
+            if (square.flags % 2 != 0):
                 pygame.draw.circle(self.highlight_layer, renderer.move_colour,
                                (file*self.square_size+offset, rank*self.square_size+offset),
                                radius=offset, width=offset//6)
@@ -178,7 +179,6 @@ class Controller:
         #turn handling
         if(self.drag.start != to_index):
             board.player_move(self.move)
-            board.evaluation()
 
             #draw the piece move before the search engine lag
             self.drag.piece = Piece.EMPTY

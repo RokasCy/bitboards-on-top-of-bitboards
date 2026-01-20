@@ -118,6 +118,7 @@ void Board::player_move(Move& move){
 
     all_pieces = occupancy[WHITE] | occupancy[BLACK];
     update_attack_info();
+
 }
 
 void Board::make_move(Move& move){
@@ -259,6 +260,15 @@ int Board::evaluation(){
     //number of squares attacked
     WHITE_VALUE += __popcnt64(attacks[WHITE]) * 5;
     BLACK_VALUE += __popcnt64(attacks[BLACK]) * 5;
+
+    if(checking_bitboard[WHITE]) WHITE_VALUE += 100;
+    if(checking_bitboard[BLACK]) BLACK_VALUE += 100;
+
+    //encourage attacking pieces
+    for(int piece = KNIGHT; piece <= QUEEN; piece++){
+        if(attacks[WHITE] & bitboard[BLACK][piece]) WHITE_VALUE += pieceValue[piece] / 20;
+        if(attacks[BLACK] & bitboard[WHITE][piece]) BLACK_VALUE += pieceValue[piece] / 20;
+    }
 
     return WHITE_VALUE-BLACK_VALUE;
 }
