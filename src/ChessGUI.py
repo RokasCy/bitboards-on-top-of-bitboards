@@ -31,7 +31,7 @@ class Renderer:
     def __init__(self):
 
         self.square_size = BOARD_SIZE // 8
-        self.piece_image = pieces_image_setup(self.square_size)
+        self.piece_image = pieces_image_setup(self.square_size, controller.player_side)
 
         self.board_layer = pygame.Surface((BOARD_SIZE, BOARD_SIZE))
         self.piece_layer = pygame.Surface((BOARD_SIZE, BOARD_SIZE), pygame.SRCALPHA)
@@ -135,7 +135,8 @@ class Controller:
         self.legal_moves = None
 
         self.robot = True
-        self.player_side = Side.WHITE
+        #1 means start first, 2 means start second
+        self.player_side = 1
 
 
     def pickup(self, event):
@@ -148,7 +149,6 @@ class Controller:
         if Piece(piece) == Piece.EMPTY: return
 
         #when playing against robot
-        if self.robot and get_side(piece) != self.player_side: return
         if get_side(piece) != self.turn : return
 
 
@@ -205,24 +205,33 @@ class Controller:
 
         #check if checkmated
         board.generate_legal_moves(board.generate_all_moves(self.turn.value), self.turn.value, True)
-        
+
+controller = Controller()
+
+controller.robot = True if input("play against robot (yes / no):").lower() == "yes" else False
+if controller.robot:
+    controller.player_side = 1 if input("pick side (white / black): ").lower() == "white" else 2
+else:
+    controller.player_side = 1
 
 
 BOARD_SIZE = 800
 window = pygame.display.set_mode((BOARD_SIZE, BOARD_SIZE))
 pygame.display.set_caption("Chess Engine")
 
+
+renderer = Renderer()
+
 board = chess_engine.Board()
 board.set_up_board()
 
-renderer = Renderer()
-controller = Controller()
-
-if(controller.player_side == Side.BLACK):
-    robot_move, eval = board.get_minimax_move(Side.WHITE.value)
+#make robot start first
+#it works weirdly i flip the piece images for the sides i.e. white pawn become black pawn but the logic stays the same
+if(controller.robot and controller.player_side == 2):
+    robot_move, eval = board.get_minimax_move(Side.BLACK.value)
     board.player_move(robot_move)
     print(f"evaluation:{eval}\n")
-    controller.turn = Side.BLACK
+    controller.turn = Side.WHITE
 
 running = True
 while running:

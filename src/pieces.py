@@ -48,14 +48,25 @@ def safe_image_load(filename, size):
     return pygame.transform.smoothscale(img, (size, size))
 
 
-def pieces_image_setup(size):
+def pieces_image_setup(size, player_side):
     piece_image = {}
 
     for p in Piece:
         if p == Piece.EMPTY: continue
 
-        img = safe_image_load(p.name, size)
-        piece_image[p] = img
+        if(player_side == 1):
+            img = safe_image_load(p.name, size)
+            piece_image[p] = img
+        elif (player_side == 2):
+            color, type = p.name.split("_")
+            pname = ""
+            if color == "WHITE":
+                pname = "BLACK_" + type
+            else:
+                pname = "WHITE_" + type
+            
+            img = safe_image_load(pname, size)
+            piece_image[p] = img
 
     return piece_image
 
