@@ -48,7 +48,7 @@ class Renderer:
                                 colour, 
                                 (x*size, y*size, size, size))
         
-        window.blit(self.board_layer)
+        window.blit(self.board_layer, (0, 0))
 
 
     def draw_pieces(self, drag):
@@ -79,7 +79,7 @@ class Renderer:
             self.piece_layer.blit(self.piece_image[drag.piece], 
                                   (drag.pixel_pos[0] - offset, drag.pixel_pos[1] - offset))
         
-        window.blit(self.piece_layer)
+        window.blit(self.piece_layer, (0, 0))
     
     def draw_highlights(self, legal_moves):
         self.highlight_layer.fill((0, 0, 0, 0))
@@ -103,7 +103,7 @@ class Renderer:
                                radius=offset//4)
             
 
-        window.blit(self.highlight_layer)
+        window.blit(self.highlight_layer, (0, 0))
     
     def checkmate(self, CHECKMATED):
         if CHECKMATED[0]:
@@ -117,7 +117,7 @@ class Renderer:
                 print("BLACK IS CHECKMATED")
                 Renderer.once = True
 
-        window.blit(self.checkmate_layer)
+        window.blit(self.checkmate_layer, (0, 0))
             
 
 
