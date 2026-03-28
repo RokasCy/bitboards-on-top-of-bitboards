@@ -1,4 +1,0 @@
-E:/Git/bitboards-on-top-of-bitboards/build/CMakeFiles/chess_engine.dir
-E:/Git/bitboards-on-top-of-bitboards/build/CMakeFiles/ALL_BUILD.dir
-E:/Git/bitboards-on-top-of-bitboards/build/CMakeFiles/ZERO_CHECK.dir
-E:/Git/bitboards-on-top-of-bitboards/build/externals/pybind11/CMakeFiles/ALL_BUILD.dir

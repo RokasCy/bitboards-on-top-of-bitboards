@@ -1,8 +1,0 @@
-{
-	"InstallScripts" : 
-	[
-		"E:/Git/bitboards-on-top-of-bitboards/build/cmake_install.cmake",
-		"E:/Git/bitboards-on-top-of-bitboards/build/externals/pybind11/cmake_install.cmake"
-	],
-	"Parallel" : false
-}
