@@ -4,8 +4,7 @@
 ![Demo Gif](assets/Demo2.gif)
 
 ## Overview
-
-The C++ engine is compiled into a python module using pybind11 and is accessed by ChessGUI.py which renders the chess board with the help of pygame
+The C++ engine is compiled into a python module using pybind11 which gets accessed by ChessGUI.py to render the chessboard (pygame).
 
 I chose to wrap the engine with python since working in c++ libraries was too much of a pain, but i ended up having to use pybind (a c++ lib) to connect the scripts anyways...
 
@@ -35,7 +34,7 @@ The evaluation system is quite simple only consisting of a few calculations for 
 - Number of squares attacked +some other things (not sure how much this helps) 
 
 ## Instructions
-This is how to compile the project for yourself, but I've already attached a prebuilt version so it should work out of the gate by downloading the python dependencies and running src/ChessGUI.py
+This is how to compile the project for yourself, but I've already attached a prebuilt version (only for python 3.13) so it should work out of the gate by downloading the python dependencies and running src/ChessGUI.py
 
 To install python requirements run this in a terminal
 ```bash
@@ -52,10 +51,3 @@ cmake --build . --config Release
 ```
 
 This will create a .pyd inside build/Release/. To finally run the program make sure the correct directory to the .pyd is linked inside src/ChessGUI.py and run it.
-
-
-
-
-#
-
-P.S. No en passant
